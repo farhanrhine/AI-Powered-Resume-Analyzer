@@ -68,11 +68,37 @@ flowchart TD
 |---|---|
 | Language | Python 3.14 |
 | Package Manager | [uv](https://docs.astral.sh/uv/) |
-| AI Model | Gemini |
+| AI Model | Gemini 2.5 Flash (`gemini-2.5-flash`) |
 | AI Orchestration | LangChain |
 | Frontend | Streamlit |
 | File Handling | PyPDF2 / pdfplumber |
 | IDE | Antigravity IDE |
+
+## API & Model Info
+
+### Model in Use
+
+| Property | Detail |
+|---|---|
+| **Model** | `gemini-2.5-flash` |
+| **Provider** | Google AI Studio (free tier) |
+| **Status** | Active ✓ (replaces `gemini-2.0-flash`, deprecated June 1 2026) |
+| **Retirement** | October 16, 2026 |
+
+### Free Tier Rate Limits (Google AI Studio)
+
+| Limit | Amount |
+|---|---|
+| **Requests per Minute (RPM)** | ~10–15 |
+| **Tokens per Minute (TPM)** | ~1,000,000 |
+| **Requests per Day (RPD)** | ~1,500 |
+| **Cost** | Free (no billing required) |
+
+> **Warning:** If you enable billing on the Google Cloud project linked to your API key, the free tier is removed for that project. Keep billing **off** to maintain free access. Use a separate project for paid usage.
+
+> **Note:** On the free tier, Google may use your input/output data to improve their models. Check [Google AI Studio](https://aistudio.google.com) → Settings → Rate Limits for your real-time, account-specific limits.
+
+---
 
 ## Project Structure
 
@@ -80,10 +106,11 @@ flowchart TD
 AI-Powered-Resume-Analyzer/
 ├── pyproject.toml
 ├── uv.lock
-├── .env                      # GEMINI_API_KEY etc. (gitignored)
-├── .env.example
+├── .env                      # Gemini_API_Key — gitignored, never commit
+├── .env.example              # Template — safe to commit
 ├── .gitignore
 ├── README.md
+├── test.py                   # API key & model sanity check
 ├── app.py                    # Streamlit entrypoint
 └── src/
     └── resume_analyzer/
@@ -153,7 +180,8 @@ uv lock --upgrade       # upgrade all dependencies
 
 ## Roadmap / Next Steps
 
-- [ ] Set up `pyproject.toml` with dependencies via `uv add`
+- [x] Set up `pyproject.toml` with dependencies via `uv add`
+- [x] Verify Gemini API key and model connectivity (`test.py`)
 - [ ] Build `resume_parser.py` (PDF/text extraction)
 - [ ] Build `jd_parser.py`
 - [ ] Implement `matching_engine.py` (scoring logic)

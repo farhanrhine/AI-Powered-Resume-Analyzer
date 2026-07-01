@@ -1,1 +1,12 @@
+# Environment / secrets
+.env
 env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# uv
+.python-version
