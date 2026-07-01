@@ -77,7 +77,7 @@ flowchart TD
 ## Project Structure
 
 ```
-resume-analyzer/
+AI-Powered-Resume-Analyzer/
 ├── pyproject.toml
 ├── uv.lock
 ├── .env                      # GEMINI_API_KEY etc. (gitignored)
