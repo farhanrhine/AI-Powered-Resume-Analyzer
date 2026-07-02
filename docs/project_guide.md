@@ -1,20 +1,66 @@
-# 🚀 AI-Powered Resume Analyzer — Build It Yourself Guide
-> **Philosophy**: Skeletons are provided. You fill in the body. Each `# TODO` is one thing you write yourself.
+# 🚀 AI-Powered Resume Analyzer — Think First, Then Build
+
+> **The rule**: Before writing ANY line of code, ask yourself: *"What problem does this line solve?"*
+> If you can't answer it, stop and think — don't type yet.
 
 ---
 
-## 🗂️ Target Project Structure
+## 🧠 The Big Picture — WHY does this app even exist?
+
+**The problem**: A job seeker uploads their resume to a job portal. They get rejected. They don't know why.
+
+**The root cause**: Their resume doesn't match the job description's keywords and requirements — and they have no way to know.
+
+**What we're building**: A tool that reads BOTH the resume and the job description, compares them using AI, and tells the person:
+1. How much does your resume match this job? (a score)
+2. What skills does the job ask for that you're missing? (gaps)
+3. What should you do about it? (suggestions)
+
+**That's it. Keep this in your head at all times.**
+
+---
+
+## 🗺️ How the app flows (read this before anything else)
+
+```
+User uploads PDF resume
+        │
+        ▼
+[resume_parser.py] ──── extracts the text from the PDF ────► resume_text (plain string)
+
+User pastes Job Description text
+        │
+        ▼
+[jd_parser.py] ──── cleans the raw text ────────────────────► jd_text (plain string)
+
+Both strings go to the AI modules:
+        │
+        ├──► [matching_engine.py] ──── "How similar are these?" ────► score + matched skills
+        │
+        ├──► [gap_analysis.py] ──── "What's missing?" ─────────────► list of gaps
+        │
+        └──► [suggestion_generator.py] ── "What should I do?" ──────► list of suggestions
+
+All results go to:
+[app.py] ──── displays everything in a Streamlit web page
+```
+
+**Every file you create is one step in that chain. That's why you're writing each one.**
+
+---
+
+## 🗂️ Project Structure
 
 ```
 AI-Powered-Resume-Analyzer/
 │
-├── app.py                      ← Streamlit UI (Phase 6)
-├── .env                        ← GOOGLE_API_KEY=your_key_here
-├── pyproject.toml              ← Already set up ✅
+├── app.py                      ← The face of the app (Phase 6)
+├── .env                        ← Your secret API key (never share this)
+├── pyproject.toml              ← Tells Python what libraries to install
 │
 └── src/
-    ├── __init__.py             ← Keep empty, just needs to exist
-    ├── utils.py                ← Phase 7 (build first, used by all)
+    ├── __init__.py             ← Tells Python "src is a package" (keep empty)
+    ├── utils.py                ← Shared tools — build this FIRST
     ├── resume_parser.py        ← Phase 1
     ├── jd_parser.py            ← Phase 2
     ├── matching_engine.py      ← Phase 3
@@ -24,72 +70,111 @@ AI-Powered-Resume-Analyzer/
 
 ---
 
-## ✅ Recommended Build Order
-```
-utils.py → resume_parser.py → jd_parser.py → matching_engine.py → gap_analysis.py → suggestion_generator.py → app.py
-```
-> **Rule**: Test each file with a `print()` at the bottom before moving to the next phase.
+---
+
+# 📦 PHASE 0 — utils.py
+
+## ❓ WHY are we building this first?
+
+**The problem**: Every module (matching_engine, gap_analysis, suggestion_generator) needs to talk to Google Gemini. If every file sets up the LLM connection on its own, you'd repeat the same 5 lines of code 3 times. If the model name changes, you'd have to fix it in 3 places.
+
+**The solution**: One file that sets up the connection. Everyone else just imports it.
+
+**Think of it like this**: `utils.py` is the power socket on the wall. Every other module plugs into it. You don't install a new power socket in every room — you wire them all to one main panel.
 
 ---
 
+## 🧠 Mental model for `get_llm()`
+
+```
+.env file (text file on disk)
+    │
+    │ load_dotenv() reads it and puts values into memory
+    ▼
+os environment (memory)
+    │
+    │ os.getenv("GOOGLE_API_KEY") reads from memory
+    ▼
+api_key variable
+    │
+    │ passed to ChatGoogleGenerativeAI(google_api_key=api_key)
+    ▼
+LLM object — a "phone" that can call Gemini
+```
+
+**WHY does this 3-step process exist?**
+Because you never want to write your API key directly in code (it could end up on GitHub). So you store it in `.env`, tell Python to read that file, then pass it to the LLM safely.
+
 ---
 
-# 📦 PHASE 0 — utils.py (Build This First!)
-
-**Why first?** All other files will import the LLM from here. Build it once, use everywhere.
+## ✏️ Skeleton — fill in the `...`
 
 ```python
 # src/utils.py
 
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+import os                              # WHY: lets you read from OS memory (where .env values go)
+from dotenv import load_dotenv         # WHY: teaches Python to read .env files
+from langchain_google_genai import ChatGoogleGenerativeAI  # WHY: the library that connects to Gemini
 
-# TODO: Call load_dotenv() here so .env is loaded when this module is imported
+load_dotenv()                          # WHY: actually reads .env RIGHT NOW, at import time
+                                       # Without this, os.getenv() returns None
 
 
 def get_llm():
     """
-    Returns a configured Gemini LLM instance.
-    All other modules should call this instead of setting up the LLM themselves.
+    Creates and returns a Gemini LLM object.
+    Call this function whenever you need to talk to Gemini.
     """
-    # TODO: Read GOOGLE_API_KEY from environment using os.getenv()
-    api_key = ...
+    # WHY: read the API key from memory (load_dotenv() put it there)
+    api_key = os.getenv("GOOGLE_API_KEY")
 
-    # TODO: Return a ChatGoogleGenerativeAI instance
-    # Hint: model="gemini-2.0-flash", temperature=0.3 is a good start
+    # WHY: create the LLM "phone" with your account credentials
+    # model = which version of Gemini to use
+    # temperature = how creative/random the responses are (0 = consistent, 1 = creative)
     return ChatGoogleGenerativeAI(
-        model=...,
-        google_api_key=...,
-        temperature=...
+        model="gemini-2.5-flash",
+        google_api_key=...,   # TODO: pass the api_key variable you read above
+        temperature=0.3,
     )
 
 
 def clean_text(text: str) -> str:
     """
-    Strips and normalizes a string.
-    Removes extra blank lines, trims whitespace.
+    Removes extra whitespace and blank lines from a string.
+    WHY: AI models charge per token (word). Sending 20 blank lines wastes money and confuses the model.
     """
-    if not text:
+    if not text:          # WHY: guard against None or empty string coming in
         return ""
-    
-    # TODO: Split into lines, strip each line, remove empty ones, rejoin
-    lines = text.splitlines()
-    # Hint: use a list comprehension with .strip() and filter out empty strings
-    cleaned_lines = ...
-    
-    return "\n".join(cleaned_lines)
-```
 
-### 🧪 Test it:
-Add this at the bottom temporarily:
-```python
+    lines = text.splitlines()       # WHY: split the big string into individual lines (gives a list)
+
+    cleaned_lines = []              # WHY: a bucket to collect the lines that are actually useful
+
+    for line in lines:
+        stripped = line.strip()     # WHY: remove leading/trailing spaces from this specific line
+        # TODO: only add `stripped` to cleaned_lines if it is NOT an empty string
+        ...
+
+    # WHY: join the surviving lines back into one string, separated by newlines
+    return "\n".join(cleaned_lines)
+
+
+# ── Test block ──────────────────────────────────────────────────────────────
+# WHY: This block only runs if you run THIS file directly (python src/utils.py)
+# It does NOT run when other files import utils.py — that's what __name__ controls
 if __name__ == "__main__":
     llm = get_llm()
-    print(type(llm))  # Should print something like <class 'ChatGoogleGenerativeAI'>
-    print(clean_text("  hello   \n\n  world  "))  # Should print: hello\nworld
+    print(type(llm))  # Should show: <class '...ChatGoogleGenerativeAI'>
+
+    result = clean_text("  hello   \n\n   world  \n  ")
+    print(repr(result))  # Should show: 'hello\nworld'
 ```
-Run with: `uv run python src/utils.py`
+
+### 🧪 Run it:
+```
+uv run python src/utils.py
+```
+**You should see the class name and `'hello\nworld'`. If you do, Phase 0 is done.**
 
 ---
 
@@ -97,56 +182,96 @@ Run with: `uv run python src/utils.py`
 
 # 📦 PHASE 1 — resume_parser.py
 
+## ❓ WHY are we building this?
+
+**The problem**: The user uploads a PDF. But PDFs are not text files — they are a binary format. Python cannot just `open()` a PDF and read words from it like a `.txt` file.
+
+**The solution**: We use `pdfplumber`, a library that knows how to decode PDFs and extract the text layer from each page.
+
+**WHY return a plain string?** Because the AI (Gemini) only understands text. It cannot read a PDF. Our job in this file is to be the **translator** — PDF in, clean text out.
+
+---
+
+## 🧠 Mental model
+
+```
+PDF file (binary — Python can't read this directly)
+        │
+        │  pdfplumber.open() decodes it
+        ▼
+pdf object (has a .pages list)
+        │
+        │  loop through each page
+        ▼
+page object
+        │
+        │  page.extract_text() pulls out the words
+        ▼
+text string (or None, if the page has no text layer)
+        │
+        │  collect all pages, join together, clean
+        ▼
+one big resume_text string ← this is what we return
+```
+
+**WHY might `extract_text()` return `None`?** PDFs can be purely image-based (scanned documents). There's no text layer to extract. We must always check for this.
+
+---
+
+## ✏️ Skeleton — fill in the `...`
+
 ```python
 # src/resume_parser.py
 
-import pdfplumber
-from src.utils import clean_text
+import pdfplumber                 # WHY: the library that can read PDF files
+from src.utils import clean_text  # WHY: reuse our shared cleaning function, don't repeat it
 
 
 def parse_resume(pdf_file) -> str:
     """
-    Extracts and returns all text from a PDF file.
-    
+    Extracts all text from a PDF file and returns it as a clean string.
+
     Args:
-        pdf_file: A file-like object (from Streamlit's st.file_uploader or open())
-    
+        pdf_file: A file-like object (from st.file_uploader or open())
+
     Returns:
-        str: The full extracted text, cleaned and joined.
+        str: Full resume text, cleaned.
     """
-    all_text = []
+    all_text = []   # WHY: a bucket to collect text from each page
 
     try:
-        # TODO: Open the pdf_file using pdfplumber.open()
-        # Hint: use `with pdfplumber.open(pdf_file) as pdf:`
-        with ...:
-            # TODO: Loop through pdf.pages
-            for page in ...:
-                # TODO: Extract text from each page using page.extract_text()
-                text = ...
-                
-                # TODO: Only append if text is not None and not empty
-                if text:
+        # WHY: 'with' ensures the PDF is closed properly even if an error occurs
+        with pdfplumber.open(pdf_file) as pdf:
+
+            # WHY: loop because a resume has multiple pages
+            for page in pdf.pages:
+
+                # WHY: extract_text() decodes this page's text. Returns None for image pages.
+                text = page.extract_text()
+
+                # TODO: check if text is not None AND not empty, then append to all_text
+                if ...:
                     all_text.append(text)
 
     except Exception as e:
-        # TODO: Print a helpful error message and return an empty string
+        # WHY: if the PDF is corrupted or unreadable, we don't want the app to crash
         print(f"Error reading PDF: {e}")
         return ""
 
-    # TODO: Join all_text into one big string (use "\n" as separator)
-    # Then pass it through clean_text() before returning
-    full_text = ...
-    return clean_text(full_text)
-```
+    # WHY: all_text is currently a list of strings (one per page)
+    # We join them into one big string with newlines between pages
+    full_text = "\n".join(all_text)
 
-### 🧪 Test it:
-```python
+    # WHY: clean it before returning — remove extra whitespace that pdfplumber sometimes adds
+    return clean_text(full_text)
+
+
+# ── Test block ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # Replace with a real PDF path on your machine
-    with open("sample_resume.pdf", "rb") as f:
+    # TODO: replace with a real PDF file path on your computer to test
+    with open("your_resume.pdf", "rb") as f:   # WHY: "rb" = read binary (PDFs are binary)
         result = parse_resume(f)
-        print(result[:500])  # Print first 500 chars to verify
+        print(result[:500])   # Print first 500 chars to see if it worked
 ```
 
 ---
@@ -155,42 +280,58 @@ if __name__ == "__main__":
 
 # 📦 PHASE 2 — jd_parser.py
 
+## ❓ WHY are we building this?
+
+**The problem**: The user pastes a Job Description into a text box. It's raw, messy text — extra spaces, empty lines, sometimes even copied HTML formatting.
+
+**The solution**: Clean it before sending to the AI.
+
+**WHY does cleaning matter?** Two reasons:
+1. AI models charge by token (roughly per word). Extra blank lines = wasted money.
+2. Cleaner input = cleaner output. Garbage in, garbage out.
+
+**This module is simple on purpose.** JD text doesn't need a special library — it's already text. We just clean it.
+
+---
+
+## ✏️ Skeleton — fill in the `...`
+
 ```python
 # src/jd_parser.py
 
-from src.utils import clean_text
+from src.utils import clean_text   # WHY: reuse the same cleaning logic, don't duplicate it
 
 
 def parse_jd(jd_text: str) -> str:
     """
-    Cleans and normalizes job description text entered by the user.
-    
+    Cleans and normalizes job description text.
+
     Args:
         jd_text: Raw string from a text area input.
-    
+
     Returns:
-        str: Cleaned job description text.
+        str: Clean job description text.
     """
-    # TODO: Check if jd_text is empty or None, return "" early if so
-    if not jd_text or ...:
+    # WHY: guard against empty input — if the user didn't type anything, return early
+    if not jd_text or not jd_text.strip():
         return ""
 
-    # TODO: Run it through clean_text() from utils
+    # TODO: pass jd_text through clean_text() and store the result
     cleaned = ...
 
-    # Optional: Check word count and warn if too short
+    # WHY: warn if the JD is suspiciously short — might be a mistake
     word_count = len(cleaned.split())
     if word_count < 30:
-        print("Warning: Job description seems very short.")
+        print(f"Warning: JD is only {word_count} words. It might be too short for a good analysis.")
 
     return cleaned
-```
 
-### 🧪 Test it:
-```python
+
+# ── Test block ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     sample = "   \n\nSoftware Engineer \n\n Must know Python   and SQL.  \n"
-    print(parse_jd(sample))
+    print(repr(parse_jd(sample)))
+    # Expected: 'Software Engineer\nMust know Python   and SQL.'
 ```
 
 ---
@@ -199,81 +340,114 @@ if __name__ == "__main__":
 
 # 📦 PHASE 3 — matching_engine.py
 
-> **This is the core of your app.** Take your time with the prompt.
+## ❓ WHY are we building this?
+
+**The problem**: We have two strings — a resume and a job description. We need to know: *how similar are they?* And specifically: *what skills appear in both?*
+
+**The solution**: Send both to Gemini and ask it to compare them. But AI models return free-form text. We need structured data (a score, a list, a summary). So we must tell the AI exactly what format to respond in.
+
+**WHY JSON?** Because Python can't work with "Your resume scores about 78 out of 100 based on...". But it CAN work with `{"score": 78}`. We need machine-readable output.
+
+**This is the heart of the whole app.**
+
+---
+
+## 🧠 Mental model for LLM calls
+
+```
+We write a prompt (a question + instructions)
+        │
+        │  llm.invoke(prompt)
+        ▼
+Gemini receives the prompt, generates a response
+        │
+        │  response.content  (this is a plain string)
+        ▼
+We get back a string like: '{"score": 78, "matched_skills": [...]}'
+        │
+        │  json.loads(response.content)
+        ▼
+Python dict: {"score": 78, "matched_skills": [...]}  ← NOW we can use it
+```
+
+**WHY `json.loads()`?** The LLM returns text, not a Python object. `json.loads()` converts the text `"{"score": 78}"` into an actual Python dictionary `{"score": 78}`.
+
+---
+
+## ✏️ Skeleton — fill in the `...`
 
 ```python
 # src/matching_engine.py
 
-import json
-from src.utils import get_llm
+import json                       # WHY: converts JSON string → Python dict
+from src.utils import get_llm     # WHY: our shared LLM setup from utils
 
 
 def analyze_match(resume_text: str, jd_text: str) -> dict:
     """
-    Uses Gemini to compare a resume against a job description.
-    Returns a match score, matched skills, and a summary.
-    
-    Returns:
-        dict with keys: 'score' (int), 'matched_skills' (list), 'summary' (str)
+    Compares resume against job description using Gemini.
+    Returns a score, matched skills, and a summary.
     """
-    llm = get_llm()
+    llm = get_llm()   # WHY: create the Gemini connection (uses our shared util)
 
-    # TODO: Write a prompt that instructs Gemini to:
-    # 1. Compare the resume and JD
-    # 2. Give a match score from 0 to 100
-    # 3. List skills/keywords found in BOTH
-    # 4. Write a short 2-3 sentence summary
-    # 5. IMPORTANT: Tell it to respond with ONLY valid JSON, no extra text
-    #
-    # Hint: Use an f-string so you can insert resume_text and jd_text
+    # WHY: we write a prompt with very specific instructions
+    # The more precise the instructions, the better the output
+    # KEY RULE: always tell the AI to return ONLY JSON — no extra explanation
     prompt = f"""
-    You are a resume screening expert. Compare the following resume and job description.
-    
-    RESUME:
-    {resume_text}
-    
-    JOB DESCRIPTION:
-    {jd_text}
-    
-    # TODO: Complete the instruction part of this prompt.
-    # Ask for a JSON response with exactly these keys:
-    # - "score": integer 0-100
-    # - "matched_skills": list of strings
-    # - "summary": string
-    # Tell it: respond with ONLY the JSON object, no markdown, no explanation.
+You are an expert resume screener. Compare this resume against this job description.
+
+RESUME:
+{resume_text}
+
+JOB DESCRIPTION:
+{jd_text}
+
+TODO: Write 3-4 lines here telling Gemini:
+1. Give a score from 0 to 100 for how well the resume matches the JD
+2. List the skills/keywords found in BOTH resume and JD
+3. Write a 2-3 sentence summary of the match
+4. CRITICAL: respond with ONLY a valid JSON object in this exact format:
+{{
+    "score": <integer 0-100>,
+    "matched_skills": [<list of strings>],
+    "summary": "<string>"
+}}
+No markdown. No explanation. Just the JSON.
     """
 
     try:
-        # TODO: Call llm.invoke(prompt) to get the response
-        response = ...
-        
-        # TODO: The response object has a .content attribute (it's a string)
+        # WHY: send the prompt to Gemini and wait for the response
+        response = llm.invoke(prompt)
+
+        # WHY: .content is where the actual text response lives
         raw_text = response.content
-        
-        # TODO: Parse the JSON string into a Python dict using json.loads()
+
+        # WHY: convert the JSON string into a Python dict so we can use .get() etc.
         result = json.loads(raw_text)
-        
+
         return result
 
     except json.JSONDecodeError:
-        # The LLM didn't return valid JSON — return a safe fallback
-        print("Warning: LLM did not return valid JSON")
+        # WHY: LLMs sometimes add ```json ``` around the response — that breaks json.loads()
+        # If this error happens, print raw_text and look at what Gemini actually returned
+        print("LLM did not return valid JSON. Raw response:")
+        print(raw_text)
         return {"score": 0, "matched_skills": [], "summary": "Could not parse response."}
-    
+
     except Exception as e:
         print(f"Error in analyze_match: {e}")
         return {"score": 0, "matched_skills": [], "summary": "An error occurred."}
-```
 
-### 🧪 Test it:
-```python
+
+# ── Test block ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    sample_resume = "Python developer with 3 years experience in REST APIs and SQL databases."
-    sample_jd = "We need a Python developer with REST API experience and SQL knowledge."
-    
+    # WHY: hardcode simple examples to test without running the full app
+    sample_resume = "Python developer with 3 years of experience. Built REST APIs and worked with SQL."
+    sample_jd = "Looking for a Python developer with REST API experience and SQL skills."
+
     result = analyze_match(sample_resume, sample_jd)
     print(result)
-    # Expected: {'score': 85, 'matched_skills': ['Python', 'REST API', 'SQL'], 'summary': '...'}
+    # Expected: something like {'score': 85, 'matched_skills': ['Python', 'REST API', 'SQL'], ...}
 ```
 
 ---
@@ -281,6 +455,18 @@ if __name__ == "__main__":
 ---
 
 # 📦 PHASE 4 — gap_analysis.py
+
+## ❓ WHY are we building this?
+
+**The problem**: We know the score. But the user needs to know specifically *what* they're missing. "You scored 60%" tells them nothing actionable. "You're missing Docker and AWS experience" tells them exactly where to focus.
+
+**The solution**: Ask Gemini to look at the JD requirements and flag anything that's NOT in the resume.
+
+**WHY a separate module from matching_engine?** Because it's a *different question*. `matching_engine` asks "what matches?" — `gap_analysis` asks "what's missing?". Keeping them separate makes each one simpler and easier to debug.
+
+---
+
+## ✏️ Skeleton — fill in the `...`
 
 ```python
 # src/gap_analysis.py
@@ -291,41 +477,49 @@ from src.utils import get_llm
 
 def find_gaps(resume_text: str, jd_text: str) -> list:
     """
-    Identifies skills and requirements in the JD that are missing from the resume.
-    
-    Returns:
-        list of strings, each describing a specific gap.
+    Identifies requirements in the JD that are NOT present in the resume.
+    Returns a list of gap descriptions.
     """
     llm = get_llm()
 
-    # TODO: Write a prompt that asks Gemini to:
-    # 1. Look at what the JD requires
-    # 2. Check what is NOT present in the resume
-    # 3. Return a JSON array (list) of gap descriptions
-    # Example output: ["No mention of Docker", "Missing AWS experience", ...]
-    # Again: tell it to return ONLY valid JSON, nothing else.
+    # TODO: Write a prompt that instructs Gemini to:
+    # 1. Look at what skills/experience/qualifications the JD requires
+    # 2. Check which ones are NOT mentioned in the resume
+    # 3. Return ONLY a JSON array (list) of gap descriptions
+    # Example output Gemini should give: ["No mention of Docker", "Missing team lead experience"]
     prompt = f"""
-    # TODO: Write your prompt here.
-    # Resume: {resume_text}
-    # Job Description: {jd_text}
+TODO: Write your full prompt here.
+
+Resume: {resume_text}
+Job Description: {jd_text}
     """
 
     try:
         response = llm.invoke(prompt)
         raw_text = response.content
-        
-        # TODO: Parse the response as a JSON list
-        gaps = json.loads(raw_text)
-        
-        # Make sure it's actually a list
+
+        # TODO: parse raw_text as a JSON list using json.loads()
+        gaps = ...
+
+        # WHY: make sure the result is actually a list before returning
         if not isinstance(gaps, list):
             return []
-        
+
         return gaps
 
     except Exception as e:
         print(f"Error in find_gaps: {e}")
         return []
+
+
+# ── Test block ──────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    sample_resume = "Python developer. Built REST APIs. Used MySQL."
+    sample_jd = "Need Python dev with Docker, Kubernetes, REST API, and team lead experience."
+
+    gaps = find_gaps(sample_resume, sample_jd)
+    print(gaps)
+    # Expected: something like ["No Docker experience", "No Kubernetes", "No team lead experience"]
 ```
 
 ---
@@ -333,6 +527,18 @@ def find_gaps(resume_text: str, jd_text: str) -> list:
 ---
 
 # 📦 PHASE 5 — suggestion_generator.py
+
+## ❓ WHY are we building this?
+
+**The problem**: We have a list of gaps. But "you're missing Docker" is still not fully helpful. The user needs to know: *what exactly should I add to my resume?*
+
+**The solution**: Take each gap and generate a specific, actionable suggestion tailored to what's already in the resume.
+
+**WHY use the resume as context too?** Because good suggestions are personal. "Add a Docker project to your experience section" is more useful than just "learn Docker". We can only say "add it to your experience section" if we know they have an experience section.
+
+---
+
+## ✏️ Skeleton — fill in the `...`
 
 ```python
 # src/suggestion_generator.py
@@ -343,62 +549,107 @@ from src.utils import get_llm
 
 def generate_suggestions(gaps: list, resume_text: str) -> list:
     """
-    Given a list of skill gaps and the resume context, generates
-    specific, actionable suggestions to improve the resume.
-    
+    Generates specific, actionable suggestions for improving the resume.
+
+    Args:
+        gaps: List of skill/experience gaps (output from find_gaps)
+        resume_text: The original resume text (for context)
+
     Returns:
-        list of suggestion strings.
+        list of suggestion strings
     """
+    # WHY: if there are no gaps, there's nothing to improve — return a congratulations message
     if not gaps:
-        return ["Your resume looks well-aligned! No major gaps found."]
+        return ["Great news! Your resume looks well-aligned with the job description."]
 
     llm = get_llm()
 
-    # Convert gaps list to a readable string for the prompt
+    # WHY: convert the gaps list into a formatted string for the prompt
+    # A list like ["gap1", "gap2"] becomes "- gap1\n- gap2"
     gaps_str = "\n".join(f"- {gap}" for gap in gaps)
 
     # TODO: Write a prompt that:
-    # 1. Shows the gaps
-    # 2. Shows the resume (for context)
-    # 3. Asks for specific, actionable suggestions for each gap
-    # 4. Returns a JSON array of suggestion strings
-    # Good suggestion example: "Add a section listing Docker projects you've worked on"
-    # Bad suggestion example: "Learn Docker" (too vague)
+    # 1. Shows Gemini the identified gaps
+    # 2. Shows Gemini the resume (so it knows what sections already exist)
+    # 3. Asks for a SPECIFIC suggestion for how to fix each gap in the resume
+    # 4. Bad suggestion: "Learn Docker" (too vague)
+    # 5. Good suggestion: "Add a bullet point in your Projects section describing a deployment you did with Docker"
+    # 6. Return ONLY a JSON array of suggestion strings
     prompt = f"""
-    # TODO: Write your prompt here.
-    # Gaps: {gaps_str}
-    # Resume context: {resume_text}
+TODO: Write your full prompt here.
+
+Gaps identified:
+{gaps_str}
+
+Resume (for context):
+{resume_text}
     """
 
     try:
         response = llm.invoke(prompt)
         raw_text = response.content
-        
-        # TODO: Parse JSON list from response
-        suggestions = json.loads(raw_text)
-        
+
+        # TODO: parse the JSON list from raw_text
+        suggestions = ...
+
         if not isinstance(suggestions, list):
             return []
-        
+
         return suggestions
 
     except Exception as e:
         print(f"Error in generate_suggestions: {e}")
         return []
+
+
+# ── Test block ──────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    sample_gaps = ["No Docker experience mentioned", "Missing team leadership"]
+    sample_resume = "Python developer. 3 years experience. Built e-commerce APIs. Led a small team."
+
+    suggestions = generate_suggestions(sample_gaps, sample_resume)
+    for s in suggestions:
+        print("-", s)
 ```
 
 ---
 
 ---
 
-# 📦 PHASE 6 — app.py (The Final Assembly)
+# 📦 PHASE 6 — app.py
+
+## ❓ WHY are we building this last?
+
+**The problem**: Everything you built so far is just Python functions. There's no interface. A normal user can't run `python src/matching_engine.py` — they need a web page with buttons.
+
+**The solution**: Streamlit. It turns Python code into a web app with almost no HTML/CSS needed.
+
+**WHY Streamlit and not Flask/React?** Because we're building a tool, not a product. Streamlit lets you wire up a UI in 50 lines. The point of this project is the AI logic — not the web framework.
+
+---
+
+## 🧠 Mental model for Streamlit
+
+```
+Every time the user clicks a button or changes an input,
+Streamlit reruns your ENTIRE app.py from top to bottom.
+
+This means:
+- Code at the top always runs
+- Code inside `if st.button(...)` only runs when clicked
+- Use st.session_state to remember things between reruns
+```
+
+---
+
+## ✏️ Skeleton — fill in the `...`
 
 ```python
 # app.py
 
 import streamlit as st
 
-# TODO: Import your 5 functions from src/
+# WHY: import the functions we built — this is where it all comes together
 from src.resume_parser import parse_resume
 from src.jd_parser import parse_jd
 from src.matching_engine import analyze_match
@@ -406,72 +657,75 @@ from src.gap_analysis import find_gaps
 from src.suggestion_generator import generate_suggestions
 
 
-# ── Page Config ──────────────────────────────────────────
-# TODO: Set page title, icon, and layout using st.set_page_config()
+# ── Page config (must be the first Streamlit call) ──────────────────────────
+# WHY: sets the browser tab title and page layout before anything renders
 st.set_page_config(
-    page_title=...,
-    page_icon=...,
+    page_title="AI Resume Analyzer",
+    page_icon="🎯",
     layout="wide"
 )
 
-# ── Header ───────────────────────────────────────────────
+# ── Header ───────────────────────────────────────────────────────────────────
 st.title("🎯 AI-Powered Resume Analyzer")
-st.markdown("Upload your resume and paste a job description to get your match score and improvement tips.")
-
+st.markdown("Upload your resume and paste a job description to see how well they match.")
 st.divider()
 
-# ── Input Section ─────────────────────────────────────────
-# TODO: Create two columns using st.columns([1, 1])
+# ── Inputs ───────────────────────────────────────────────────────────────────
+# WHY: columns put two things side by side instead of stacked vertically
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("📄 Your Resume")
-    # TODO: Add a file uploader that only accepts PDF files
-    uploaded_file = st.file_uploader(..., type=["pdf"])
+    # WHY: file_uploader gives the user a drag-and-drop PDF upload widget
+    # type=["pdf"] restricts to PDFs only
+    uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
 
 with col2:
     st.subheader("📋 Job Description")
-    # TODO: Add a text area for the JD. Give it a height of about 300
-    jd_input = st.text_area(..., height=300)
+    # TODO: add a st.text_area for the user to paste the job description
+    # Give it a label and height=300
+    jd_input = st.text_area(...)
 
 st.divider()
 
-# ── Analyze Button ────────────────────────────────────────
-# TODO: Add a centered button labeled "Analyze My Resume"
+# ── Analyze button ────────────────────────────────────────────────────────────
+# WHY: use_container_width=True makes the button stretch the full width
 analyze_btn = st.button("🔍 Analyze My Resume", use_container_width=True)
 
-# ── Results Section ───────────────────────────────────────
+# ── Results ───────────────────────────────────────────────────────────────────
+# WHY: this entire block only runs when the user clicks the button
 if analyze_btn:
-    # Validate inputs before proceeding
+
+    # WHY: validate before sending to AI — don't waste API calls on empty inputs
     if not uploaded_file:
-        st.error("Please upload a PDF resume first.")
+        st.error("⚠️ Please upload a PDF resume first.")
     elif not jd_input.strip():
-        st.error("Please paste a job description.")
+        st.error("⚠️ Please paste a job description.")
     else:
-        # TODO: Use st.spinner() to show a loading message while processing
-        with st.spinner("Analyzing your resume... this may take a few seconds ⏳"):
-            
-            # Step 1: Parse inputs
+        # WHY: spinner shows the user something is happening (LLM calls take 3-10 seconds)
+        with st.spinner("Analyzing your resume... ⏳"):
+
+            # Step 1: Extract text from inputs
             resume_text = parse_resume(uploaded_file)
             jd_text = parse_jd(jd_input)
-            
-            # Step 2: Run analysis
+
+            # Step 2: Run AI analysis
             match_result = analyze_match(resume_text, jd_text)
             gaps = find_gaps(resume_text, jd_text)
             suggestions = generate_suggestions(gaps, resume_text)
 
-        # ── Display Results ───────────────────────────────
-        st.success("Analysis complete!")
+        # WHY: show success AFTER the spinner ends
+        st.success("✅ Analysis complete!")
         st.divider()
 
-        # TODO: Show match score using st.metric()
-        # Hint: st.metric(label="Match Score", value=f"{score}%")
+        # ── Score + Summary ──────────────────────────────────────────────────
         score = match_result.get("score", 0)
         matched_skills = match_result.get("matched_skills", [])
         summary = match_result.get("summary", "")
 
         r1, r2 = st.columns([1, 2])
         with r1:
+            # WHY: st.metric is a built-in Streamlit widget for displaying key numbers
             st.metric(label="🎯 Match Score", value=f"{score}%")
         with r2:
             st.markdown("**📝 Summary**")
@@ -479,32 +733,34 @@ if analyze_btn:
 
         st.divider()
 
-        # TODO: Show matched skills using st.success() or a loop with st.badge / st.write
+        # ── Matched Skills ────────────────────────────────────────────────────
         st.subheader("✅ Matched Skills")
         if matched_skills:
-            # Hint: You can display them as a comma-separated string or loop through them
-            st.write(", ".join(matched_skills))
+            # TODO: display the matched_skills list — join them or loop through them
+            ...
         else:
             st.write("No matching skills found.")
 
         st.divider()
 
-        # TODO: Show gaps list using st.warning() for each item
+        # ── Gaps ──────────────────────────────────────────────────────────────
         st.subheader("⚠️ Skill Gaps")
         if gaps:
+            # TODO: loop through gaps and show each one using st.warning()
             for gap in gaps:
-                st.warning(gap)
+                ...
         else:
             st.success("No major gaps detected!")
 
         st.divider()
 
-        # TODO: Show suggestions using st.info() for each item, numbered
+        # ── Suggestions ───────────────────────────────────────────────────────
         st.subheader("💡 How to Improve Your Resume")
+        # TODO: loop through suggestions, number them, show each with st.info()
         for i, suggestion in enumerate(suggestions, start=1):
-            st.info(f"**{i}.** {suggestion}")
+            ...
 
-        # Optional: Show raw resume text in a collapsible section
+        # WHY: expander hides verbose content by default — keeps the page clean
         with st.expander("📄 View extracted resume text"):
             st.text(resume_text)
 ```
@@ -515,35 +771,29 @@ if analyze_btn:
 
 ## 🚩 Common Gotchas
 
-| Problem | Fix |
+| Error you'll see | What it means | Fix |
+|---|---|---|
+| `ModuleNotFoundError: src` | Python can't find your src folder | Run from project root: `uv run streamlit run app.py` |
+| `json.JSONDecodeError` | LLM wrapped response in ```json ``` | Strip it: `raw.strip().strip("```json").strip("```")` before `json.loads()` |
+| `extract_text()` returns `None` | PDF is image-based, no text layer | Add `if text:` check before appending |
+| `GOOGLE_API_KEY` is None | `.env` wasn't loaded or key is missing | Check `.env` has the key, check `load_dotenv()` is called |
+
+---
+
+## ✅ Definition of Done for Each Phase
+
+Before moving to the next phase, your test block at the bottom must print a correct result.
+
+| Phase | You know it works when... |
 |---|---|
-| `ModuleNotFoundError: src` | Run from project root: `uv run streamlit run app.py` |
-| LLM returns text with ```json ``` markers | Strip it: `raw_text.strip().strip("```json").strip("```")` before `json.loads()` |
-| `None` from `page.extract_text()` | Always check `if text:` before appending |
-| API key not found | Make sure `.env` has `GOOGLE_API_KEY=...` and you call `load_dotenv()` |
-| Gemini response isn't JSON | Add `"Respond with ONLY valid JSON. No markdown. No explanation."` at end of prompt |
+| utils.py | `type(llm)` prints and `clean_text()` removes blanks |
+| resume_parser.py | Real PDF text appears in terminal |
+| jd_parser.py | Cleaned JD text prints correctly |
+| matching_engine.py | A dict with `score`, `matched_skills`, `summary` prints |
+| gap_analysis.py | A list of gap strings prints |
+| suggestion_generator.py | A list of suggestion strings prints |
+| app.py | Full end-to-end flow works in browser |
 
 ---
 
-## 🧠 The Mental Model
-
-```
-PDF File ──► parse_resume() ──► resume_text (string)
-JD Text  ──► parse_jd()     ──► jd_text     (string)
-                                    │
-                          ┌─────────┼─────────┐
-                          ▼         ▼         ▼
-                   analyze_match  find_gaps  (combined)
-                          │         │
-                          ▼         ▼
-                      match_result  gaps ──► generate_suggestions()
-                                                    │
-                                                    ▼
-                                             suggestions (list)
-```
-
-All of these feed into `app.py` to display results.
-
----
-
-*You know more than you think. The skeleton is there — just fill in the blanks. 💪*
+*You know more than you think. Read the WHY. Then write the code. One line at a time.*
