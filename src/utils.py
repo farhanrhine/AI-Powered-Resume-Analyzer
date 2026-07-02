@@ -5,37 +5,43 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 
 def get_llm():
+
     """
-    Return a configuread Gemini LLm instance.
-    All other modules should call this instead of setting up the LLM themselves.
+    call this function whenever need to talk to llm
     """
+    api_key = os.getenv("GEMINI_API_KEY")
 
     return ChatGoogleGenerativeAI(
-        model = "gemini-2.5-flash",
-        temperature = 0.7,
+        model = "gemini-flash-2.5",
+        temperature = 0.5,
+        google_api_key = api_key 
+
     )
 
 
-def clean_text(text: str)->str:
+def clean_text(text : str) -> str:
     """
-    Remove blank & white space.
+    remove white space from string
     """
-
     if not text:
         return ""
-
+    
+    cleaned_lines = []
 
     lines = text.splitlines()
-    cleaned_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            cleaned_lines.append(stripped)
 
     return "\n".join(cleaned_lines)
 
 
+# if __name__ == "__main__":
+#     llm = get_llm()
+#     print(type(llm))
 
-    if __name__ == "__main__":
-        llm = get_llm()
-        print(type(llm))
-        print(clean_text("hola \n world"))
-
-
+#     result = clean_text("      helo  \n\n world \n  ")
+#     print(repr(result))
 
