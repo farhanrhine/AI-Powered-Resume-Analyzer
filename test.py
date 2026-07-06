@@ -22,7 +22,7 @@ if not api_key:
 print(f"[OK]  API key loaded ({api_key[:8]}...)")
 
 # ── Initialise model ──────────────────────────────────────────────────────────
-MODEL = "gemini-2.5-flash"              # free-tier, active as of July 2026 (2.0-flash deprecated June 1 2026)
+MODEL = "gemini-3.5-flash"              # free-tier, active as of July 2026 (2.0-flash deprecated June 1 2026)
 
 llm = ChatGoogleGenerativeAI(
     model=MODEL,
@@ -38,9 +38,9 @@ prompt = "Say hello and tell me what you are in one sentence."
 print(f"[>>]  Prompt  : {prompt}")
 print("[..]  Waiting for response ...\n")
 
-response = llm.invoke([HumanMessage(content=prompt)])
+response = llm.invoke(prompt)
 
 print("-" * 60)
-print(f"[<<]  Response:\n{response.content}")
+print(f"[<<]  Response:\n{response.text}")
 print("-" * 60)
 print("\n[DONE]  Gemini API is working correctly!")

@@ -7,7 +7,7 @@ def parser_resume(pdf_file) -> str:
     """
     Extract all text from pdf and return a clean string
 
-    args : a pdf file
+    Args : a pdf file
 
     return : a full resume text, cleaned.
     """
