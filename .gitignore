@@ -9,3 +9,5 @@ __pycache__/
 
 # uv
 .python-version
+docs/
+
